@@ -1,3 +1,5 @@
+#-*- coding: utf-8 -*-
+import pymysql
 from math import sqrt
 from numpy import concatenate
 from matplotlib import pyplot
@@ -10,7 +12,9 @@ from sklearn.metrics import mean_squared_error
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
-
+import  pandas as pd
+import sys
+sys.setrecursionlimit(100000000) #例如这里设置为十万
 
 # convert series to supervised learning
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
@@ -36,13 +40,31 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
         agg.dropna(inplace=True)
     return agg
 
+conn = pymysql.connect(host='127.0.0.1', \
+                       user='root', password='123.com', \
+                       db='testdata', charset='utf8', \
+                       use_unicode=True)
+# 查询出所有的监测空气的地区
+placeSql = "SELECT date,pollution,dew,temp,press,wnd_dir,wnd_spd,snow,rain  from pollution"
+data = pd.read_sql(placeSql, con=conn)
+
+#
+dataset = data
+dataset.set_index('date')
+dataset.drop('wnd_dir',axis=1, inplace=True)
+dataset.drop('date',axis=1, inplace=True)
+dataset.drop(1)
+
 
 # load dataset
-dataset = read_csv('pollution.csv', header=0, index_col=0)
+#dataset1 = read_csv('pollution.csv', header=0, index_col=0)
+print(dataset.head())
+#print(dataset1.head())
 values = dataset.values
 # integer encode direction
 encoder = LabelEncoder()
 values[:, 4] = encoder.fit_transform(values[:, 4])
+
 # ensure all data is float
 values = values.astype('float32')
 print("values", values)
@@ -52,7 +74,7 @@ scaled = scaler.fit_transform(values)
 # frame as supervised learning
 reframed = series_to_supervised(scaled, 1, 1)
 # drop columns we don't want to predict
-reframed.drop(reframed.columns[[9, 10, 11, 12, 13, 14, 15]], axis=1, inplace=True)
+reframed.drop(reframed.columns[[9, 10, 11, 12, 13]], axis=1, inplace=True)
 print(reframed.head())
 
 # split into train and test sets
@@ -68,7 +90,7 @@ train_X = train_X.reshape((train_X.shape[0], 1, train_X.shape[1]))
 test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
 print(train_X.shape, train_y.shape, test_X.shape, test_y.shape)
 
-# design networkreframed
+# design network
 model = Sequential()
 model.add(LSTM(50, input_shape=(train_X.shape[1], train_X.shape[2])))
 model.add(Dense(1))

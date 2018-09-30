@@ -41,6 +41,7 @@ values = dataset.values
 # integer encode direction
 encoder = LabelEncoder()
 values[:,4] = encoder.fit_transform(values[:,4])
+print(type(values))
 # ensure all data is float
 values = values.astype('float32')
 # normalize features
